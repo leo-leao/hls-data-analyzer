@@ -59,6 +59,12 @@ class Plot():
             Plot.__remove_folder(origin_folder)
 
         print("Done:", filename)
+
+    @staticmethod
+    def get_axis(pv: str) -> int:
+        if "setup" in pv.lower():
+            return int(pv[12:14])
+        return int(pv[16:18])
         
     @staticmethod
     def dict_to_pandas(data_dict: dict) -> pd.DataFrame:
@@ -66,7 +72,7 @@ class Plot():
         # Re-organizing data of archiver
         convert = {}
         pvs = data_dict.keys()
-        for pv in sorted(pvs, key=lambda pv: pv[16:18]):
+        for pv in sorted(pvs, key=Plot.get_axis):
             convert[pv] = data_dict[pv]["y"]
         convert["datetime"] =  data_dict[pv]["x"]
         
@@ -185,7 +191,7 @@ class Plot2D(Plot):
         dataframe = Plot2D.dict_to_pandas(level_measurements)
         if diff:
             dataframe = Plot2D.diff(dataframe)
-        axes = [int(pv[16:18]) for pv in dataframe.columns.values]
+        axes = [Plot3D.get_axis(pv) for pv in dataframe.columns.values]
         
         figure, ax = Plot2D.__figure_ax(diff=diff)
         ax.set_xlim(axes[0], axes[-1])
@@ -210,13 +216,14 @@ class Plot2D(Plot):
 
         # Converting data to pandas dataframe
         dataframe = Plot2D.diff(Plot2D.dict_to_pandas(level_measurements))
-        axes = [int(pv[16:18]) for pv in dataframe.columns.values]
+        axes = [Plot2D.get_axis(pv) for pv in dataframe.columns.values]
 
         # Loop through dataframe rows
         with alive_bar(dataframe.shape[0], title="Generating 2D dynamic plot") as bar:
 
             # Creating folder to save figures
             folder = Plot2D.create_folder("2d_dynamic")
+            min_y, max_y = Plot2D.min_max(dataframe)
 
             for row in range(dataframe.shape[0]):
                 figure, ax = Plot2D.__figure_ax(diff=True)
@@ -224,7 +231,6 @@ class Plot2D(Plot):
 
                 # Axes limits
                 ax.set_xlim(axes[0], axes[-1])
-                min_y, max_y = Plot2D.min_max(dataframe)
                 ax.set_ylim(min_y*1.1, max_y*1.1)
 
                 # Smoothing the curve
@@ -270,13 +276,14 @@ class Plot3D(Plot):
 
         # Converting data to pandas dataframe
         dataframe = Plot3D.diff(Plot3D.dict_to_pandas(level_measurements))
-        axes = [int(pv[16:18]) for pv in dataframe.columns.values]
+        axes = [Plot3D.get_axis(pv) for pv in dataframe.columns.values]
 
         # Loop through dataframe rows
         with alive_bar(dataframe.shape[0], title='Generating 3D dynamic plot') as bar:
 
             # Creating folder to save figures
             folder = Plot3D.create_folder("3d_dynamic")
+            z_min, z_max = Plot3D.min_max(dataframe)
 
             for row in range(dataframe.shape[0]):
 
@@ -288,7 +295,6 @@ class Plot3D(Plot):
                 # Plotting data
                 figure = plt.figure()
                 ax = figure.add_subplot(111, projection="3d")
-                z_min, z_max = Plot3D.min_max(dataframe)
                 surface = ax.plot_surface(Plot3D.X, Plot3D.Y, Z, cmap="viridis",
                                         linewidth=0, antialiased=False, vmin=z_min, vmax=z_max)
                 ax.set_zlim(z_min*1.1, z_max*1.1)
